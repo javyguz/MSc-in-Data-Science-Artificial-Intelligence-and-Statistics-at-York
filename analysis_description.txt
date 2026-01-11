@@ -1,0 +1,53 @@
+ANALYSIS DESCRIPTION
+
+====================
+The Dataset
+====================
+
+The dataset (RStudio Data.csv) contains survey data from 101 students at the University of York regarding their opinions on campus wildlife. It includes:
+
+- Demographic variables: Degree Level (Undergraduate/Postgraduate) and Faculty (Science, Social Sciences, Arts & Humanities)
+
+- Animal rating variables: Individual ratings (1-5 scale) for 10 different animals commonly seen on campus: Ducks, Geese, Squirrels, Swans, Foxes, Rabbits, Seagulls, Long Boi (a famous duck), Hedgehogs, and Mice
+
+- Summary variables: Total number of animals spotted and average opinion score
+
+
+====================
+Data Pre-processing Performed
+====================
+
+The data pre-processing steps included:
+
+- Variable selection: Created a subset (dataNew) containing only key variables: Degree Level, Faculty, Number of animals, and Average Opinion
+
+- Variable renaming: Simplified column names for easier reference
+
+- Data type conversion: Ensured numeric variables were correctly formatted using as.integer() and as.numeric()
+
+- Data recoding: Expanded Faculty abbreviations to full names (e.g., "SocSci" → "Social Sciences", "Arts&Hu" → "Arts and Humanities")
+
+- Feature engineering: Created new variables including:
+  * OpinionGroup: Binary classification (High/Low) based on Opinion ≥ 3 threshold
+  * NumberPerDay: Daily animal sighting rate calculated as Number/7
+
+- Data filtering: Generated focused subsets (e.g., Science faculty only, high opinion respondents)
+
+
+====================
+Analysis Performed
+====================
+
+The analysis consisted of:
+
+- Descriptive statistics: Calculated means, medians, standard deviations, and other summary statistics for all variables using summary(), describe(), and describeBy()
+
+- Group comparisons: Examined differences in animal sightings across faculty groups using tapply() and describeBy()
+
+- Data visualization: Created bar plots with error bars showing mean number of animal sightings by faculty, including:
+  * Statistical significance indicators comparing all faculty pairs
+  * Accessible color schemes (viridis palette)
+  * Interactive versions using plotly
+
+- Statistical testing: Visual comparison of means across faculty groups with significance testing via geom_signif()
+

@@ -1,0 +1,71 @@
+SELECT * from (
+    SELECT
+        CO.* EXCEPT(PLANT,DELIVERY, ORIGIN_FIRST),
+        TB.* EXCEPT(BIN, rat_3_28 , TB.PROD_SPLITED, TB.PROD_TECNICO, TB.PLANPROD ,NA_7, NA_3)
+    
+    from (
+        SELECT *,
+            SPLIT(CODIGO_DE_PRODUCTO, '-') AS PROD_SPLITED,
+            ARRAY_JOIN(ARRAY(PROD_SPLITED[0], PROD_SPLITED[1], PROD_SPLITED[2], PROD_SPLITED[3], PROD_SPLITED[4], PROD_SPLITED[7], PROD_SPLITED[8], PROD_SPLITED[9]), '-') AS PROD_TECNICO,
+            CONCAT(PLANT, '/', PROD_TECNICO) AS PLANPROD,
+            floor(NA_28/50)*50 as BIN,
+            NA_3/NA_28 as rat_3_28
+        from model_preparation.pyrmstrength_strengthpred_batch.strength_dataset_view
+    ) as TB
+    INNER JOIN (SELECT * FROM model_preparation.pyrmstrength_strengthpred_batch.rmq_na_vars_history_mexico) RM
+        ON (RM.DELIVERY = TB.DELIVERY)
+    LEFT JOIN (SELECT * FROM model_preparation.pyrmstrength_strengthpred_batch.rmq_outliers_iqr_history_mexico) OL
+        ON (
+            TB.PLANPROD = OL.PLANPROD
+            AND OL.PLAZA = RM.PLAZA
+            AND OL.month = '2025-01-01'
+        )
+    INNER JOIN (SELECT
+            d.DELIVERY,
+            c.PTA_CONSUMO as PLANT,
+            c.BLAINE_WD9,
+            c.BLAINE_WD6,
+            c.BLAINE_WD3,
+            c.BLAINE_W0,
+            c.BLAINE_WA3,
+            c.BLAINE_WA6,
+            c.BLAINE_WA9,
+            c.R3_WD9,
+            c.R3_WD6,
+            c.R3_WD3,
+            c.R3_W0,
+            c.R3_WA3,
+            c.R3_WA6,
+            c.R3_WA9,
+            c.R7_WD9,
+            c.R7_WD6,
+            c.R7_WD3,
+            c.R7_W0,
+            c.R7_WA3,
+            c.R7_WA6,
+            c.R7_WA9,
+            c.PTA_ORIGEN_INMEDIATA as ORIGIN_FIRST,
+            c.PTA_ORIGEN_ULTIMA as ORIGIN_LAST,
+            d.MATERIAL::STRING as MATERIAL,
+            c.PTA_ORIGEN_NOMBRE_ULTIMA as ORIGIN_NAME
+        FROM silver.mex.us_strength_uv_sap_info_consuticket AS d
+        INNER JOIN
+            model_preparation.pyrmstrength_strengthpred_batch.cement_quality_variables_v3 AS c
+            ON (d.BASIC_START_DAY::DATE = c.DATE_CONSUMO AND d.PLANT = c.PTA_CONSUMO AND d.MATERIAL = c.MAT_CONSUMO)
+        WHERE d.MATERIAL_T = 'CEM') AS CO
+        ON (CO.DELIVERY = TB.DELIVERY)
+    INNER JOIN feature_store.operations_ready_mix.projections_7a28 P7
+        ON P7.DELIVERY = TB.DELIVERY
+    LEFT JOIN feature_store.operations_ready_mix.consistency CS
+        ON (CS.DELIVERY = TB.DELIVERY)
+    
+    WHERE (OL.NA_28_max IS NULL AND RM.NA_28/PROD_SPLITED[1] >= OL.rat_res_min AND RM.NA_28/PROD_SPLITED[1] <= OL.rat_res_max) OR ((OL.NA_28_max IS NOT NULL) AND
+        (RM.NA_28 <= OL.NA_28_max AND RM.NA_28 >= OL.NA_28_min
+        AND RM.NA_7 <= OL.NA_7_max AND RM.NA_7 >= OL.NA_7_min
+        AND RM.NA_3 <= OL.NA_3_max AND RM.NA_3 >= OL.NA_3_min))
+)
+WHERE DATE >= '2023-11-01'
+    AND RES_THEO <= 450
+    AND RES_THEO >= 150
+    AND PLAZA in ('Mexico  D.F.')
+    AND DATE < '2025-01-01'
